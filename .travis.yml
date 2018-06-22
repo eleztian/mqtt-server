@@ -9,6 +9,7 @@ install:
   - export GOPATH=$HOME/golang
   - export PATH=$PATH:$HOME/golang/bin
   - go get -v github.com/golang/dep
+  - mkdir /home/travis/golang/bin
   - curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
   - dep ensure
   - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
