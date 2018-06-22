@@ -13,4 +13,4 @@ install:
   - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
     
 script:
-  - go run ./server/*.go
+  - pwd
