@@ -11,7 +11,7 @@ install:
   - go get -v github.com/golang/dep
   - cd $GOPATH/src/github.com/golang/dep && go install && cd -
   - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-  - dep ensure
+  - ./$HOME/golang/bin/dep ensure
     
 script:
   - go run service/server.go
