@@ -2,10 +2,11 @@ package main
 
 import (
 	"net"
-	"github.com/davecgh/go-spew/spew"
 	"net/url"
+
+	"github.com/davecgh/go-spew/spew"
+	"github.com/eleztian/mqtt-server/transport"
 	"github.com/pkg/errors"
-	"tab/mqtt-server/transport"
 	"gopkg.in/tomb.v2"
 )
 
@@ -24,7 +25,7 @@ func NewServer(urlStr string) (*Server, error) {
 		return nil, err
 	}
 	server := &Server{
-		tomb:&tomb.Tomb{},
+		tomb: &tomb.Tomb{},
 	}
 	switch u.Scheme {
 	case "tcp":
@@ -34,7 +35,7 @@ func NewServer(urlStr string) (*Server, error) {
 		}
 		server.conn = lst
 	default:
-		return nil, errors.New("unknown net type "+ u.Scheme)
+		return nil, errors.New("unknown net type " + u.Scheme)
 	}
 	return server, nil
 }
@@ -62,7 +63,7 @@ func handle(c *transport.Conn) error {
 }
 
 func main() {
-	server,err := NewServer("tcp://0.0.0.0:1883")
+	server, err := NewServer("tcp://0.0.0.0:1883")
 	if err != nil {
 		panic(err)
 	}

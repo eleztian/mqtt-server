@@ -1,9 +1,9 @@
 package transport
 
 import (
-	"tab/mqtt-server/packet"
 	"sync"
 	"net"
+	"github.com/eleztian/mqtt-server/packet"
 )
 
 type Conn struct {
