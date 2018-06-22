@@ -1,0 +1,16 @@
+language: go
+ 
+go:
+  - 1.9
+ 
+sudo: required
+ 
+install:
+  - export GOPATH=$HOME/golang
+  - export PATH=$PATH:$HOME/golang/bin
+  - go get -v github.com/golang/dep
+  - cd src/github.com/golang/dep && go install && cd -
+  - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+ 
+script:
+  - sh build.sh

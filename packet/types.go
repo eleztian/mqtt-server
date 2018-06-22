@@ -1,5 +1,7 @@
 package packet
 
+import "errors"
+
 //go:generate stringer -type=Type
 
 // Type represents the MQTT packet types.
@@ -10,6 +12,7 @@ const (
 	_           Type = iota // 保留
 	CONNECT                 // 请求连接
 	CONNACK                 // 请求应答
+	
 	PUBLISH                 // 发布消息
 	PUBACK                  // 发布应答
 	PUBREC                  // 发布已接收，保证传递1
@@ -19,6 +22,7 @@ const (
 	SUBACK                  // 订阅应答
 	UNSUBSCRIBE             // 取消订阅
 	UNSUBACK                // 取消订阅应答
+
 	PINGREQ                 // ping请求
 	PINGRESP                // ping响应
 	DISCONNECT              // 断开连接
@@ -60,6 +64,14 @@ func (t Type) defaultFlags() byte {
 	return 0
 }
 
+func (t Type) New() (Packet, error) {
+	switch t {
+	case CONNECT:
+		return NewConnectPacket(), nil
+	}
+	return nil, errors.New("unknown type")
+}
+
 // QOS
 
 type Qos byte
@@ -78,3 +90,10 @@ const (
 	// to a specific topic.
 	QOSFailure = 0x80
 )
+
+func validQos(q byte) bool {
+	if q > 2 || q < 0 {
+		return false
+	}
+	return true
+}

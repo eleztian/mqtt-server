@@ -2,7 +2,7 @@ package packet
 
 import (
 	"encoding/binary"
-	"github.com/pkg/errors"
+	"fmt"
 )
 
 const maxRemainingLength = 268435455 // 256 MB
@@ -10,7 +10,7 @@ const maxRemainingLength = 268435455 // 256 MB
 func headerDecode(src []byte, t Type) (index int, flags byte, rl int, err error) {
 	// check buffer size
 	if len(src) < 2 {
-		err = errors.Wrap(BUFFER_SIZE_ERROR, "HeaderDecode")
+		err = fmt.Errorf("[%s] insufficient buffer size, want more than %d, got %d", t, 2, len(src))
 		return
 	}
 
@@ -22,13 +22,13 @@ func headerDecode(src []byte, t Type) (index int, flags byte, rl int, err error)
 
 	// check type
 	if t != decodeType {
-		err = errors.Wrap(TYPE_ERROR, "HeaderDecode")
+		err = fmt.Errorf("[%s] deocode type error want %s get %s", t, t, decodeType)
 		return
 	}
 
 	// check flags
 	if t != PUBLISH && t.defaultFlags() != flags {
-		err = errors.Wrap(FLAGS_ERROR, "HeaderDecode")
+		err = fmt.Errorf("[%s] flag error want %d get %d", t, t.defaultFlags(), flags)
 		return
 	}
 
@@ -38,12 +38,12 @@ func headerDecode(src []byte, t Type) (index int, flags byte, rl int, err error)
 
 	// check length
 	if m <= 0 {
-		err = errors.Wrap(REMAIN_LENGTH_ERROR, "HeaderDecode")
+		err = fmt.Errorf("[%s] remaining length error, want %d get %d", t, t.defaultFlags(), flags)
 		return
 	}
 	index += m
-	if len(src[index:]) != rl {
-		err = errors.Wrap(REMAIN_BUFFERR_SIZE_ERROR, "HeaderDecode")
+	if len(src[index:]) < rl {
+		err = fmt.Errorf("[%s] leave buffer length too less, want %d get %d", t, rl, len(src[index:]))
 		return
 	}
 	return
@@ -52,13 +52,13 @@ func headerDecode(src []byte, t Type) (index int, flags byte, rl int, err error)
 func headerEncode(dst []byte, flags byte, rl int, al int, t Type) (index int, err error) {
 	// check length
 	if len(dst) < al {
-		err = errors.Wrap(BUFFER_SIZE_ERROR, "HeaderEncode")
+		err = fmt.Errorf("[%s] insufficient buffer size, want more than %d, got %d", t, 2, len(dst))
 		return
 	}
 
 	// check remaining length
 	if rl > maxRemainingLength {
-		err = errors.Wrap(REMAIN_LENGTH_ERROR, "HeaderDecode")
+		err = fmt.Errorf("[%s]  remaining length should less than %d, but got %d", t, maxRemainingLength, rl)
 		return
 	}
 
@@ -74,9 +74,25 @@ func headerEncode(dst []byte, flags byte, rl int, al int, t Type) (index int, er
 
 	// check buf length
 	if len(dst) < (1 + n + rl) {
-		err = errors.Wrap(REMAIN_BUFFERR_SIZE_ERROR, "HeaderEncode")
+		err = fmt.Errorf("[%s]  buffer size error, want %d got %d", t, 1+n+rl, len(dst))
 		return
 	}
 
 	return
+}
+func headerLen(rl int) int {
+	// packet type and flag byte
+	total := 1
+
+	if rl <= 127 {
+		total++
+	} else if rl <= 16383 {
+		total += 2
+	} else if rl <= 2097151 {
+		total += 3
+	} else {
+		total += 4
+	}
+
+	return total
 }
