@@ -11,9 +11,6 @@ install:
   - go get -v github.com/golang/dep
   - cd $GOPATH/src/github.com/golang/dep && go install && cd -
   - export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-  - cd $GOPATH/src/
-  - mv github.com/eleztian/matt-server tab/
-  - cd $GOPATH/src/tab/mqtt-server/server
     
 script:
-  - go run *.go
+  - go run ./server/*.go
