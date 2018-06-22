@@ -1,4 +1,4 @@
-# mqtt-server ![](https://travis-ci.org/eleztian/mqtt-server.svg?branch=develop)
+# mqtt-server [![](https://travis-ci.org/eleztian/mqtt-server.svg?branch=develop)](https://travis-ci.org/eleztian/mqtt-server/)
 a simple mqtt server support plugins
 
 # MQTT 协议
