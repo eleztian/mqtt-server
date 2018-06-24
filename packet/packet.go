@@ -2,7 +2,6 @@ package packet
 
 import (
 	"encoding/binary"
-	"errors"
 )
 
 type Packet interface {
@@ -10,16 +9,6 @@ type Packet interface {
 	Len() int
 	Decode(src []byte) (int, error)
 	Encode(dst []byte) (int, error)
-}
-
-func NewPacket(t Type) (Packet, error) {
-	switch t {
-	case CONNECT:
-		return &ConnectPacket{}, nil
-	case CONNACK:
-		return &ConnectAckPacket{}, nil
-	}
-	return nil, errors.New("unknown packet type")
 }
 
 

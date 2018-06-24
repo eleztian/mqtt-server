@@ -1,6 +1,8 @@
 package packet
 
-import "errors"
+import (
+	"errors"
+)
 
 //go:generate stringer -type=Type
 
@@ -68,8 +70,30 @@ func (t Type) New() (Packet, error) {
 	switch t {
 	case CONNECT:
 		return NewConnectPacket(), nil
+	case CONNACK:
+		return NewConnackPacket(), nil
+	case DISCONNECT:
+		return NewDisconnectPacket(), nil
+	case PINGREQ:
+		return NewPingReqPacket(), nil
+	case PUBLISH:
+		return NewPublishPacket(), nil
+	case PUBREC:
+		return NewPubrecPacket(), nil
+	case PUBREL:
+		return NewPubrecPacket(), nil
+	case PUBCOMP:
+		return NewPubcompPacket(), nil
+	case SUBSCRIBE:
+		return NewSubscribePacket(), nil
+	case SUBACK:
+		return NewPubackPacket(), nil
+	case UNSUBSCRIBE:
+		return NewUnsubscribePacket(), nil
+	case UNSUBACK:
+		return NewUnsubackPacket(), nil
 	}
-	return nil, errors.New("unknown type")
+	return nil, errors.New("unknown packet type")
 }
 
 // QOS
@@ -91,7 +115,7 @@ const (
 	QOSFailure = 0x80
 )
 
-func validQos(q byte) bool {
+func (q Qos) Valid() bool {
 	if q > 2 || q < 0 {
 		return false
 	}

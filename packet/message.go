@@ -9,10 +9,14 @@ type Message struct {
 	Payload []byte
 
 	// The QOS indicates the level of assurance for delivery.
-	QOS byte
+	QOS Qos
 
 	// If the Retain flag is set to true, the server must store the message,
 	// so that it can be delivered to future subscribers whose subscriptions
 	// match its topic name.
 	Retain bool
+}
+
+func (m *Message) String() string {
+	return string(m.Payload)
 }

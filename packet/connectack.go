@@ -46,6 +46,10 @@ type ConnectAckPacket struct {
 	ReturnCode     ConnackCode
 }
 
+func NewConnackPacket() *ConnectAckPacket {
+	return &ConnectAckPacket{}
+}
+
 func (p *ConnectAckPacket) Type() Type {
 	return CONNACK
 }

@@ -2,6 +2,7 @@ package packet
 
 import (
 	"encoding/binary"
+	"fmt"
 	"github.com/pkg/errors"
 )
 
@@ -89,7 +90,7 @@ func (p *ConnectPacket) Decode(src []byte) (int, error) {
 	usernameFlag := (flags >> 7) & 0x01
 	passwordFlag := (flags >> 6) & 0x01
 	willRetainFlag := (flags >> 5) & 0x01
-	willQosFlag := (flags >> 4) & 0x03
+	willQosFlag := Qos((flags >> 4) & 0x03)
 	willFlag := (flags >> 2) & 0x01
 	cleanSessionFlag := (flags >> 1) & 0x01
 	reservedFlag := flags & 0x01
@@ -102,7 +103,7 @@ func (p *ConnectPacket) Decode(src []byte) (int, error) {
 		return index, Error(p.Type().String(), "password flag", 1, passwordFlag)
 	}
 
-	if !validQos(willQosFlag) {
+	if !willQosFlag.Valid() {
 		return index, Error(p.Type().String(), "will Qos Flag", "0 1 2", willQosFlag)
 	}
 
@@ -162,32 +163,177 @@ func (p *ConnectPacket) Decode(src []byte) (int, error) {
 }
 
 func (p *ConnectPacket) Encode(dst []byte) (int, error) {
+	total := 0
 
+	// encode header
+	n, err := headerEncode(dst[total:], 0, p.len(), p.Len(), CONNECT)
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	// set default version byte
+	if p.Version == 0 {
+		p.Version = Version311
+	}
+
+	// check version byte
+	if p.Version != Version311 && p.Version != Version31 {
+		return total, Error(string(CONNECT), " protocol version", "", p.Version)
+	}
+
+	// write version string, length has been checked beforehand
+	if p.Version == Version311 {
+		n, _ = writeBytes(dst[total:], []byte(string(Version311)), CONNECT)
+		total += n
+	} else if p.Version == Version31 {
+		n, _ = writeBytes(dst[total:], []byte(string(Version31)), CONNECT)
+		total += n
+	}
+
+	// write version value
+	dst[total] = byte(p.Version)
+	total++
+
+	var connectFlags byte
+
+	// set username flag
+	if len(p.Username) > 0 {
+		connectFlags |= 128 // 10000000
+	} else {
+		connectFlags &= 127 // 01111111
+	}
+
+	// set password flag
+	if len(p.Password) > 0 {
+		connectFlags |= 64 // 01000000
+	} else {
+		connectFlags &= 191 // 10111111
+	}
+
+	// set will flag
+	if p.Will != nil {
+		connectFlags |= 0x4 // 00000100
+
+		// check will topic length
+		if len(p.Will.Topic) == 0 {
+			return total, fmt.Errorf("[%s] will topic is empty", p.Type())
+		}
+
+		// check will qos
+		if !p.Will.QOS.Valid() {
+			return total, fmt.Errorf("[%s] invalid will qos level %d", p.Type(), p.Will.QOS)
+		}
+
+		// set will qos flag
+		connectFlags = (connectFlags & 231) | (byte(p.Will.QOS) << 3) // 231 = 11100111
+
+		// set will retain flag
+		if p.Will.Retain {
+			connectFlags |= 32 // 00100000
+		} else {
+			connectFlags &= 223 // 11011111
+		}
+
+	} else {
+		connectFlags &= 251 // 11111011
+	}
+
+	// check client id and clean session
+	if len(p.ClientID) == 0 && !p.CleanSession {
+		return total, fmt.Errorf("[%s] clean session must be 1 if client id is zero length", p.Type())
+	}
+
+	// set clean session flag
+	if p.CleanSession {
+		connectFlags |= 0x2 // 00000010
+	} else {
+		connectFlags &= 253 // 11111101
+	}
+
+	// write connect flags
+	dst[total] = connectFlags
+	total++
+
+	// write keep alive
+	binary.BigEndian.PutUint16(dst[total:], p.KeepAlive)
+	total += 2
+
+	// write client id
+	n, err = writeString(dst[total:], p.ClientID, p.Type())
+	total += n
+	if err != nil {
+		return total, err
+	}
+
+	// write will topic and payload
+	if p.Will != nil {
+		n, err = writeString(dst[total:], p.Will.Topic, p.Type())
+		total += n
+		if err != nil {
+			return total, err
+		}
+
+		n, err = writeBytes(dst[total:], p.Will.Payload, p.Type())
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+
+	if len(p.Username) == 0 && len(p.Password) > 0 {
+		return total, fmt.Errorf("[%s] password set without username", p.Type())
+	}
+
+	// write username
+	if len(p.Username) > 0 {
+		n, err = writeString(dst[total:], p.Username, p.Type())
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+
+	// write password
+	if len(p.Password) > 0 {
+		n, err = writeString(dst[total:], p.Password, p.Type())
+		total += n
+		if err != nil {
+			return total, err
+		}
+	}
+
+	return total, nil
 	return 0, nil
 }
 
-func (p *ConnectPacket) Len() int {
+func (p *ConnectPacket) len() int {
 	remainLength := 0
 	// version name
 	remainLength += len(p.Version.String()) + 2
 	// protcol level
-	remainLength ++
+	remainLength++
 	// flags
-	remainLength ++
+	remainLength++
 	// keepalive
-	remainLength +=2
+	remainLength += 2
 	// client id
 	remainLength += len(p.ClientID) + 2
 
 	// will
 	if p.Will != nil {
-		remainLength += len(p.Will.Topic)+ len(p.Will.Payload) + 4
+		remainLength += len(p.Will.Topic) + len(p.Will.Payload) + 4
 	}
 	// username password
 	if p.Username != "" {
 		remainLength += len(p.Username) + len(p.Password) + 4
 	}
-	return remainLength + headerLen(remainLength)
+	return remainLength
+}
+
+func (p *ConnectPacket) Len() int {
+	l := p.len()
+	return l + headerLen(l)
 }
 
 func readString(buf []byte) (string, int, error) {
@@ -221,4 +367,30 @@ func readBytes(buf []byte) ([]byte, int, error) {
 	r := make([]byte, l)
 	copy(r, buf[index:index+l])
 	return r, index + l, nil
+}
+
+const maxLPLength uint16 = 65535
+
+func writeString(dst []byte, s string, t Type) (int, error) {
+	return writeBytes(dst, []byte(s), t)
+}
+
+func writeBytes(dst []byte, b []byte, t Type) (int, error) {
+	total, n := 0, len(b)
+
+	if n > int(maxLPLength) {
+		return 0, Error(string(t), "string length ", "less than 65535 byte", n)
+	}
+
+	if len(dst) < 2+n {
+		return 0, Error(string(t), "insufficient buffer size ", 2+n, len(dst))
+	}
+
+	binary.BigEndian.PutUint16(dst, uint16(n))
+	total += 2
+
+	copy(dst[total:], b)
+	total += n
+
+	return total, nil
 }
