@@ -1,6 +1,9 @@
 package packet
 
-import "encoding/binary"
+import (
+	"encoding/binary"
+	"errors"
+)
 
 type Packet interface {
 	Type() Type
@@ -8,6 +11,17 @@ type Packet interface {
 	Decode(src []byte) (int, error)
 	Encode(dst []byte) (int, error)
 }
+
+func NewPacket(t Type) (Packet, error) {
+	switch t {
+	case CONNECT:
+		return &ConnectPacket{}, nil
+	case CONNACK:
+		return &ConnectAckPacket{}, nil
+	}
+	return nil, errors.New("unknown packet type")
+}
+
 
 // 解析前两个字节,尝试获取下一个packet的类型和长度
 func DetectPacket(src []byte) (int, Type) {
